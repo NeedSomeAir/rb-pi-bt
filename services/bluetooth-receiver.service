@@ -1,0 +1,29 @@
+[Unit]
+Description=Bluetooth Message Receiver Service
+After=bluetooth.service network.target
+Requires=bluetooth.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=bluetooth
+WorkingDirectory=/home/ubuntu/bluetooth_project/src
+ExecStart=/usr/bin/python3 /home/ubuntu/bluetooth_project/src/bluetooth_receiver.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment=PYTHONPATH=/home/ubuntu/bluetooth_project/src
+Environment=HOME=/home/ubuntu
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Bluetooth permissions
+SupplementaryGroups=bluetooth audio
+
+[Install]
+WantedBy=multi-user.target
