@@ -2,6 +2,7 @@
 # utils.py
 
 import os
+import re
 import subprocess
 import time
 import logging
@@ -216,7 +217,6 @@ class SystemUtils:
         """Get disk usage percentage"""
         try:
             # Use os.statvfs which is faster than running df command
-            import os
             stat = os.statvfs('/')
             total = stat.f_blocks * stat.f_frsize
             free = stat.f_bfree * stat.f_frsize
@@ -240,9 +240,8 @@ class SystemUtils:
 class MessageUtils:
     """Utility functions for message processing"""
     
-    # Pre-compile regex for better performance
-    import re
-    _CONTROL_CHAR_PATTERN = re.compile(r'[\x00-\x1f\x7f-\x9f]')
+    # Pre-compile regex for better performance (excludes newlines, tabs, carriage returns)
+    _CONTROL_CHAR_PATTERN = re.compile(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]')
     
     @staticmethod
     def clean_message(message):
@@ -251,6 +250,7 @@ class MessageUtils:
             return ""
         
         # Remove control characters using pre-compiled regex (faster)
+        # Preserves \n (0x0a), \r (0x0d), \t (0x09)
         cleaned = MessageUtils._CONTROL_CHAR_PATTERN.sub('', message)
         
         # Strip whitespace

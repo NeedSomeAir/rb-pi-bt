@@ -20,16 +20,10 @@ class MessageBroadcaster:
         self.audio_queue = []
         self.audio_lock = threading.Lock()
         self.is_audio_playing = False
-        self._log_file_cache = {}  # Cache open log files
-        self._log_buffer = {}  # Buffer for log messages
         
         # Initialize audio
         if self.config.ENABLE_AUDIO_BROADCAST:
             self._init_audio()
-    
-    def __del__(self):
-        """Cleanup when broadcaster is destroyed"""
-        self._close_all_log_files()
     
     def _init_audio(self):
         """Initialize audio system"""
@@ -68,23 +62,15 @@ class MessageBroadcaster:
             timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             separator = '='*50
             
-            # Build output efficiently
-            output_parts = [
-                f"\n{separator}",
-                "📱 BLUETOOTH MESSAGE RECEIVED",
-                separator,
-                f"Time: {timestamp}"
-            ]
-            
+            # Print efficiently
+            print(f"\n{separator}")
+            print("📱 BLUETOOTH MESSAGE RECEIVED")
+            print(separator)
+            print(f"Time: {timestamp}")
             if sender_info:
-                output_parts.append(f"From: {sender_info}")
-            
-            output_parts.extend([
-                f"Message: {message}",
-                f"{separator}\n"
-            ])
-            
-            print('\n'.join(output_parts))
+                print(f"From: {sender_info}")
+            print(f"Message: {message}")
+            print(f"{separator}\n")
         except Exception as e:
             logger.error(f"Error broadcasting to console: {e}")
     
@@ -162,16 +148,6 @@ class MessageBroadcaster:
             
         except Exception as e:
             logger.error(f"Error logging message to file: {e}")
-    
-    def _close_all_log_files(self):
-        """Close all cached log files"""
-        for f in self._log_file_cache.values():
-            try:
-                if f and not f.closed:
-                    f.close()
-            except:
-                pass
-        self._log_file_cache.clear()
     
     def broadcast_system_event(self, event_type, details=None):
         """Broadcast system events (connection, disconnection, etc.)"""
