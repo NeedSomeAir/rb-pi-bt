@@ -89,10 +89,12 @@ with open(log_file, 'a', encoding='utf-8', buffering=8192) as f:
 # Before: Character-by-character iteration
 cleaned = ''.join(char for char in message if ord(char) >= 32 or char in '\n\r\t')
 
-# After: Pre-compiled regex
-_CONTROL_CHAR_PATTERN = re.compile(r'[\x00-\x1f\x7f-\x9f]')
+# After: Pre-compiled regex (preserves \n, \r, \t)
+_CONTROL_CHAR_PATTERN = re.compile(r'[\x00-\x08\x0b-\x0c\x0e-\x1f\x7f-\x9f]')
 cleaned = MessageUtils._CONTROL_CHAR_PATTERN.sub('', message)
 ```
+
+**Note**: The regex pattern specifically excludes `\x09` (tab), `\x0a` (newline), and `\x0d` (carriage return) to preserve whitespace formatting while removing other control characters.
 
 ### 7. Improved Thread Management
 
