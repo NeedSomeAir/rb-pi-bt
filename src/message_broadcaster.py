@@ -59,15 +59,18 @@ class MessageBroadcaster:
     def _broadcast_to_console(self, message, sender_info=None):
         """Print message to console with formatting"""
         try:
-            formatted_message = MessageUtils.format_message_for_display(message, sender_info)
-            print(f"\n{'='*50}")
-            print(f"📱 BLUETOOTH MESSAGE RECEIVED")
-            print(f"{'='*50}")
-            print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            separator = '='*50
+            
+            # Print efficiently
+            print(f"\n{separator}")
+            print("📱 BLUETOOTH MESSAGE RECEIVED")
+            print(separator)
+            print(f"Time: {timestamp}")
             if sender_info:
                 print(f"From: {sender_info}")
             print(f"Message: {message}")
-            print(f"{'='*50}\n")
+            print(f"{separator}\n")
         except Exception as e:
             logger.error(f"Error broadcasting to console: {e}")
     
@@ -76,10 +79,7 @@ class MessageBroadcaster:
         def speak_message():
             try:
                 # Limit message length for TTS
-                if len(message) > 200:
-                    speak_text = message[:200] + "... message truncated"
-                else:
-                    speak_text = message
+                speak_text = message[:200] + "... message truncated" if len(message) > 200 else message
                 
                 # Use espeak for text-to-speech
                 cmd = [
@@ -96,11 +96,13 @@ class MessageBroadcaster:
                 logger.warning("TTS timeout - message too long")
             except Exception as e:
                 logger.error(f"Error in text-to-speech: {e}")
+            finally:
+                self.is_audio_playing = False
         
         # Run TTS in separate thread to avoid blocking
         if not self.is_audio_playing:
             self.is_audio_playing = True
-            threading.Thread(target=lambda: [speak_message(), setattr(self, 'is_audio_playing', False)]).start()
+            threading.Thread(target=speak_message, daemon=True).start()
     
     def _broadcast_to_display(self, message, sender_info=None):
         """Show desktop notification"""
@@ -110,10 +112,7 @@ class MessageBroadcaster:
                 title += f" from {sender_info}"
             
             # Limit message length for notification
-            if len(message) > 100:
-                display_message = message[:100] + "..."
-            else:
-                display_message = message
+            display_message = message[:100] + "..." if len(message) > 100 else message
             
             # Use notify-send for desktop notifications
             cmd = [
@@ -124,14 +123,14 @@ class MessageBroadcaster:
                 display_message
             ]
             
-            subprocess.run(cmd, capture_output=True)
+            subprocess.run(cmd, capture_output=True, timeout=5)
             logger.info("Desktop notification sent")
             
         except Exception as e:
             logger.error(f"Error showing desktop notification: {e}")
     
     def _broadcast_to_file(self, message, sender_info=None):
-        """Log message to file"""
+        """Log message to file with buffering"""
         try:
             log_message = MessageUtils.format_message_for_log(message, sender_info)
             
@@ -141,7 +140,8 @@ class MessageBroadcaster:
                 f"messages_{datetime.now().strftime('%Y%m%d')}.log"
             )
             
-            with open(log_file, 'a', encoding='utf-8') as f:
+            # Use buffered writing for better performance
+            with open(log_file, 'a', encoding='utf-8', buffering=8192) as f:
                 f.write(log_message + '\n')
             
             logger.info(f"Message logged to {log_file}")
@@ -171,7 +171,8 @@ class MessageBroadcaster:
                     f"system_{datetime.now().strftime('%Y%m%d')}.log"
                 )
                 
-                with open(log_file, 'a', encoding='utf-8') as f:
+                # Use buffered writing for better performance
+                with open(log_file, 'a', encoding='utf-8', buffering=8192) as f:
                     f.write(log_message + '\n')
             
             logger.info(f"System event: {event_type}")
