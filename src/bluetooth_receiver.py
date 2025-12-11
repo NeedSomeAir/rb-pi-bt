@@ -66,6 +66,9 @@ class BluetoothReceiver:
     
     def _start_server(self):
         """Start the Bluetooth server socket"""
+        retry_delay = 5  # Initial retry delay in seconds
+        max_retry_delay = 60  # Maximum retry delay
+        
         try:
             # Create server socket
             self.server_socket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
@@ -86,6 +89,9 @@ class BluetoothReceiver:
                     client_socket, client_info = self.server_socket.accept()
                     self.client_socket = client_socket
                     
+                    # Reset retry delay on successful connection
+                    retry_delay = 5
+                    
                     client_address = client_info[0]
                     self.logger.info(f"Accepted connection from {client_address}")
                     self.broadcaster.broadcast_system_event("CONNECTION_ESTABLISHED", f"Connected to {client_address}")
@@ -96,11 +102,14 @@ class BluetoothReceiver:
                 except bluetooth.btcommon.BluetoothError as e:
                     if self.is_running:
                         self.logger.error(f"Bluetooth error: {e}")
-                        time.sleep(5)  # Wait before retrying
+                        time.sleep(retry_delay)
+                        # Exponential backoff
+                        retry_delay = min(retry_delay * 2, max_retry_delay)
                 except Exception as e:
                     if self.is_running:
                         self.logger.error(f"Unexpected error: {e}")
-                        time.sleep(5)
+                        time.sleep(retry_delay)
+                        retry_delay = min(retry_delay * 2, max_retry_delay)
                 finally:
                     if self.client_socket:
                         try:
@@ -151,9 +160,9 @@ class BluetoothReceiver:
                         self.broadcaster.broadcast_message(message, client_address)
                         
                         # Send acknowledgment back to client (optional)
+                        ack = f"Message received at {datetime.now().strftime('%H:%M:%S')}".encode('utf-8')
                         try:
-                            ack = f"Message received at {datetime.now().strftime('%H:%M:%S')}"
-                            client_socket.send(ack.encode('utf-8'))
+                            client_socket.send(ack)
                         except:
                             pass  # Don't fail if can't send acknowledgment
                 
